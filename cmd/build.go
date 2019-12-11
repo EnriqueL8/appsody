@@ -500,7 +500,11 @@ func updateDeploymentConfig(config *buildCommandConfig, imageName string, labels
 	var selectedLabels = make(map[string]string)
 	for _, label := range supportedKubeLabels {
 		if labels[label] != "" {
-			selectedLabels[label] = labels[label]
+			if label == "app.appsody.dev/name" {
+				selectedLabels["app.kubernetes.io/name"] = labels[label]
+			} else {
+				selectedLabels[label] = labels[label]
+			}
 			delete(labels, label)
 		}
 	}
