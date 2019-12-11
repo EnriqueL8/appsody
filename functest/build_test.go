@@ -300,6 +300,10 @@ func verifyImageAndConfigLabelsMatch(t *testing.T, appsodyApplication v1beta1.Ap
 			t.Errorf("Could not convert label to Kubernetes format: %s", err)
 		}
 
+		if key == "app.appsody.dev/name" {
+			key = "app.kubernetes.io/name"
+		}
+
 		label := appsodyApplication.Labels[key]
 		annotation := appsodyApplication.Annotations[key]
 		if label == "" && annotation == "" {
