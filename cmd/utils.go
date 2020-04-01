@@ -1060,6 +1060,7 @@ func getStackLabels(config *RootCommandConfig) (map[string]string, error) {
 	if err != nil {
 		return labels, err
 	}
+	var digest string
 	if config.Buildah {
 		err = json.Unmarshal([]byte(inspectOut), &buildahData)
 		if err != nil {
@@ -1067,25 +1068,34 @@ func getStackLabels(config *RootCommandConfig) (map[string]string, error) {
 		}
 		containerConfig = buildahData["config"].(map[string]interface{})
 		config.Debug.Log("Config inspected by buildah: ", config)
+		digest = buildahData["FromImageDigest"].(string)
 	} else {
 		err := json.Unmarshal([]byte(inspectOut), &data)
 		if err != nil {
 			return labels, errors.Errorf("Error unmarshaling data from inspect command - exiting %v", err)
 		}
 		containerConfig = data[0]["Config"].(map[string]interface{})
+		imageAndDigest := data[0]["RepoDigests"].([]interface{})
+		if len(imageAndDigest) > 0 { //Check that the image has a digest
+			digestSplit := strings.Split(imageAndDigest[0].(string), "@")
+			if len(digestSplit) == 2 {
+				digest = digestSplit[1]
+			}
+		}
 	}
+
+	if digest != "" { //Check that the image has a digest
+		labels[appsodyStackKeyPrefix+"digest"] = digest
+	} else {
+		config.Warning.Log("Could not find digest label.")
+	}
+
 	if containerConfig["Labels"] != nil {
 		labelsMap := containerConfig["Labels"].(map[string]interface{})
 
 		for key, value := range labelsMap {
 			labels[key] = value.(string)
 		}
-	}
-
-	imageAndDigest := data[0]["RepoDigests"].([]interface{})
-	if len(imageAndDigest) > 0 { //Check that the image has a digest
-		digest := strings.Split(imageAndDigest[0].(string), "@")
-		labels[appsodyStackKeyPrefix+"digest"] = digest[1]
 	}
 
 	return labels, nil
